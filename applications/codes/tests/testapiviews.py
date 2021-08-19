@@ -6,11 +6,15 @@ from ..serializers import ProductSerializer, MarkingCodeSerializer
 from rest_framework.test import APIRequestFactory
 from ..apiviews import MarkingCodeViewSet
 from django.contrib.auth import get_user_model
+
+from ..utils.codes import fetch_unprinted, mark_as_printed
+from ..utils.exceptions import MyException
 from ...users.models import Company
 import datetime
 import pytest
 
 User = get_user_model()
+
 
 class MarkingCodeAPITest(APITestCase):
 
@@ -50,15 +54,48 @@ class MarkingCodeAPITest(APITestCase):
 
         self.factory = APIRequestFactory()
         self.view = MarkingCodeViewSet.as_view({'get': 'list',
-                                         'post': 'create', })
+                                                'post': 'create', })
 
-    def test_get_list(self):
-        #marking = MarkingCode.objects.all()
-        #serializer = MarkingCodeSerializer(marking, many=True).data
-        #request = self.factory.get(reverse("marking-code:marking-code-list"))
-        #response = self.view(request)
-        #self.assertEqual(response.data, serializer)
-        self.assertEqual(MarkingCode.objects.count(), 2)
-        #self.assertEqual(response.status_code, status.HTTP_200_OK)
+    # def test_get_list(self):
+    #    # marking = MarkingCode.objects.all()
+    #    # serializer = MarkingCodeSerializer(marking, many=True).data
+    # request = self.factory.get(reverse("marking-code:marking-code-list"))
+    # response = self.view(request)
+    # self.assertEqual(response.data, serializer)
+    #    self.assertEqual(MarkingCode.objects.count(), 2)
+    # self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_fetch_unprinted_error(self):
+        try:
+            result = fetch_unprinted(101)
+        except MyException as e:
+            result = e
+        self.assertIsInstance(result, MyException)
 
+    def test_fetch_unprinted_status_changed(self):
+        try:
+            result = fetch_unprinted(10)
+            for item in result:
+                self.assertEqual(item.status, 'Отдан на печать')
+        except MyException as e:
+            result = e
+        self.assertNotEqual(type(result), MyException)
+
+    def test_mark_as_printed_error(self):
+        try:
+            result = mark_as_printed([])
+        except MyException as e:
+            result = e
+        self.assertIsInstance(result, MyException)
+
+    def test_mark_as_printed_status_changed(self):
+        try:
+            ListOfMark = [1, 2, 3]
+            result = mark_as_printed(ListOfMark)
+            self.assertEqual(result[0], True)
+            changed = MarkingCode.objects.filter(pk__in=ListOfMark)
+            for item in changed:
+                self.assertEqual(item.status, MarkingCode.SUCCESSFULL)
+        except MyException as e:
+            result = e
+        self.assertNotEqual(type(result), MyException)

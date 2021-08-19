@@ -1,13 +1,19 @@
 from rest_framework import permissions, viewsets
 from .serializers import ProductSerializer, MarkingCodeSerializer
 from .models import Product, MarkingCode
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.decorators import action
 
 from rest_framework.response import Response
 import json
 from django.core import serializers
 from django.http import JsonResponse
+
+from .utils.codes import (
+    fetch_unprinted,
+    mark_as_printed,
+)
+from .utils.exceptions import MyException
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -29,6 +35,20 @@ class MarkingCodeViewSet(viewsets.ModelViewSet):
         user = self.request.user
         return MarkingCode.objects.filter(company_id=user.company)
 
-    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['get'])
     def fetch_unprinted(self, request):
-        pass
+        try:
+            x = int(request.query_params.get('x'))
+            codes = fetch_unprinted(x)
+            serializer = MarkingCodeSerializer(codes, many=True)
+            return Response(serializer.data)
+        except MyException as e:
+            return Response({"error": f"""{e}"""})
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def mark_as_printed(self, request):
+        result_ok, error_text = mark_as_printed(request.data)
+        if result_ok:
+            return Response({"result": "success"})
+        else:
+            return Response({"error": error_text})

@@ -37,7 +37,7 @@ class NonceViewSet(viewsets.ModelViewSet):
         user = self.request.user
         return Nonce.objects.filter(company_id=user.company)
 
-    @action(detail=True, methods=['post', 'get'], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['post', 'get'])
     def save_signed(self, request, pk=None):
         Nonce.objects.update(id=pk, signed_nonce=b'22')
         return Response({'status': 'Вы создали подпись'})
