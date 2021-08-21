@@ -12,6 +12,7 @@ from django.http import JsonResponse
 from .utils.codes import (
     fetch_unprinted,
     mark_as_printed,
+    scan_codes,
 )
 from .utils.exceptions import MyException
 
@@ -52,3 +53,15 @@ class MarkingCodeViewSet(viewsets.ModelViewSet):
             return Response({"result": "success"})
         else:
             return Response({"error": error_text})
+
+    @action(detail=False, methods=['post'])
+    def scan_codes(self, request):
+        result = scan_codes(request.data)
+        if result == 'ok':
+            return Response({"status": "ok"})
+        elif result == 'not found':
+            return Response({"status": "not found"})
+        elif result == 'already scanned':
+            return Response({"status": "already scanned"})
+        else:
+            return Response({"status": "Error"})

@@ -7,7 +7,7 @@ from rest_framework.test import APIRequestFactory
 from ..apiviews import MarkingCodeViewSet
 from django.contrib.auth import get_user_model
 
-from ..utils.codes import fetch_unprinted, mark_as_printed
+from ..utils.codes import fetch_unprinted, mark_as_printed, scan_codes
 from ..utils.exceptions import MyException
 from ...users.models import Company
 import datetime
@@ -99,3 +99,28 @@ class MarkingCodeAPITest(APITestCase):
         except MyException as e:
             result = e
         self.assertNotEqual(type(result), MyException)
+
+
+    def test_scan_codes(self):
+        list_of_codes = [
+            """ 010464015267011721blt+(zOlJ'G,S938xF9 """,
+            """ 112224015267011721blt+(zOlJ'G,S938xF9 """,
+            """ testvalue """
+        ]
+
+        try:
+            result = scan_codes(list_of_codes)
+            self.assertEquals(result, 'ok')
+        except Exception as e:
+            result = e
+            self.assertEquals(result, 'not found')
+
+
+        # code = [x for x in lift_of_codes]
+        # queryset = MarkingCode.objects.filter(value__in=code)
+        # if code in queryset:
+        #     self.assertEqual(code, queryset)
+        #
+        # else:
+        #     self.assertNotEqual(code, queryset)
+        #     return f'not found'

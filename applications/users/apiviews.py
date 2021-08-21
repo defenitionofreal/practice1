@@ -6,6 +6,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
+from .utils.nonce import save_signed
+
 
 class СertificateViewSet(viewsets.ModelViewSet):
     """ Retrieve List Create Destroy Сertificate View """
@@ -37,7 +39,8 @@ class NonceViewSet(viewsets.ModelViewSet):
         user = self.request.user
         return Nonce.objects.filter(company_id=user.company)
 
-    @action(detail=True, methods=['post', 'get'])
+    @action(detail=True, methods=['post', 'get'],
+            permission_classes=[IsAuthenticated])
     def save_signed(self, request, pk=None):
-        Nonce.objects.update(id=pk, signed_nonce=b'22')
+        save_signed(10, pk)
         return Response({'status': 'Вы создали подпись'})

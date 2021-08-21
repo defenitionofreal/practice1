@@ -27,3 +27,18 @@ def mark_as_printed(items: list):
             return False, f"{e}"
     else:
         raise MyException("Список кодов пуст")
+
+
+def scan_codes(list_of_scanned_codes: list):
+    for code in list_of_scanned_codes:
+        queryset = MarkingCode.objects.filter(value__in=code)
+        if code == queryset:
+            if queryset.SCANNED or queryset.ERROR or queryset.SUCCESSFULL:
+                return 'already scanned'
+            elif queryset.CONFIRMED:
+                queryset.update(status=MarkingCode.SCANNED)
+                return 'ok'
+            else:
+                return 'error'
+        else:
+            return 'not found'

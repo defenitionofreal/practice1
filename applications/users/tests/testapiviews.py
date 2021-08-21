@@ -7,6 +7,7 @@ from rest_framework.test import APIRequestFactory
 from ..apiviews import NonceViewSet
 from django.contrib.auth import get_user_model
 from ...users.models import Company
+from ..utils.nonce import save_signed
 import datetime
 import base64
 import pytest
@@ -21,6 +22,17 @@ user = auth.get_user(client)
 User = get_user_model()
 
 #NONCE_SAVE_SIGN_URL = reverse('users:nonce-detail/pk/save_signed/')
+
+
+def test_save_signed(self):
+    """ test save_signed method """
+    try:
+        result = save_signed(5, 1)
+        self.assertEqual(result, 'Вы создали подпись')
+    except Exception as e:
+        result = e
+        self.assertEqual(result, Exception)
+
 
 class NonceAPITest(APITestCase):
 
