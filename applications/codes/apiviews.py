@@ -3,6 +3,7 @@ from .serializers import ProductSerializer, MarkingCodeSerializer
 from .models import Product, MarkingCode
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.decorators import action
+from django.views.decorators.csrf import csrf_exempt
 
 from rest_framework.response import Response
 import json
@@ -56,12 +57,8 @@ class MarkingCodeViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def scan_codes(self, request):
-        result = scan_codes(request.data)
-        if result == 'ok':
-            return Response({"status": "ok"})
-        elif result == 'not found':
-            return Response({"status": "not found"})
-        elif result == 'already scanned':
-            return Response({"status": "already scanned"})
-        else:
-            return Response({"status": "Error"})
+        codes = request.data
+        result = scan_codes(codes)
+        return Response({"statuses": {
+            codes[i]: result[i] for i in range(len(codes))
+        }})

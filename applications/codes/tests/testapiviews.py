@@ -1,13 +1,17 @@
+import base64
+import pprint
+
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.test import APITestCase
 from django.urls import reverse
-from rest_framework import status, serializers
+from rest_framework import status, serializers, HTTP_HEADER_ENCODING
 from ..models import Product, MarkingCode
 from ..serializers import ProductSerializer, MarkingCodeSerializer
-from rest_framework.test import APIRequestFactory
+from rest_framework.test import APIRequestFactory, force_authenticate
 from ..apiviews import MarkingCodeViewSet
 from django.contrib.auth import get_user_model
 
-from ..utils.codes import fetch_unprinted, mark_as_printed, scan_codes
+from ..utils.codes import fetch_unprinted, mark_as_printed, scan_codes, check_marking_code
 from ..utils.exceptions import MyException
 from ...users.models import Company
 import datetime
@@ -25,7 +29,7 @@ class MarkingCodeAPITest(APITestCase):
 
         self.user_1 = User.objects.create(
             username='testuser',
-            company=self.company_1
+            company=self.company_1,
         )
 
         self.product_1 = Product.objects.create(
@@ -48,6 +52,24 @@ class MarkingCodeAPITest(APITestCase):
             product=self.product_1,
             value='testvalue2',
             status=MarkingCode.SENT,
+            timestamp_get=datetime.datetime.now(),
+            timestamp_circulation=datetime.datetime.now()
+        )
+
+        self.marking_code_3 = MarkingCode.objects.create(
+            company=self.company_1,
+            product=self.product_1,
+            value='testvalue3',
+            status=MarkingCode.SCANNED,
+            timestamp_get=datetime.datetime.now(),
+            timestamp_circulation=datetime.datetime.now()
+        )
+
+        self.marking_code_3 = MarkingCode.objects.create(
+            company=self.company_1,
+            product=self.product_1,
+            value='testvalue4',
+            status=MarkingCode.LOST_AFTER,
             timestamp_get=datetime.datetime.now(),
             timestamp_circulation=datetime.datetime.now()
         )
@@ -100,27 +122,30 @@ class MarkingCodeAPITest(APITestCase):
             result = e
         self.assertNotEqual(type(result), MyException)
 
-
-    def test_scan_codes(self):
-        list_of_codes = [
-            """ 010464015267011721blt+(zOlJ'G,S938xF9 """,
-            """ 112224015267011721blt+(zOlJ'G,S938xF9 """,
-            """ testvalue """
-        ]
-
+    def test_check_marking_code(self):
         try:
-            result = scan_codes(list_of_codes)
-            self.assertEquals(result, 'ok')
+            result = check_marking_code('jhfilvuhowiugthoiw')
+            self.assertEqual(result, 'not found')
+
+            result = check_marking_code('testvalue')
+            self.assertEqual(result, 'ok')
+            self.assertEqual(self.marking_code_1.status, MarkingCode.SCANNED)
+
+            result = check_marking_code('testvalue3')
+            self.assertEqual(result, 'already scanned')
+
+            result = check_marking_code('testvalue4')
+            self.assertEqual(result, 'error')
         except Exception as e:
-            result = e
-            self.assertEquals(result, 'not found')
+            print(f"{e}")
 
-
-        # code = [x for x in lift_of_codes]
-        # queryset = MarkingCode.objects.filter(value__in=code)
-        # if code in queryset:
-        #     self.assertEqual(code, queryset)
-        #
-        # else:
-        #     self.assertNotEqual(code, queryset)
-        #     return f'not found'
+    def test_create_todo(self):
+        self.client.enforce_csrf_checks = False
+        self.client.login(username=self.user_1.username, password=self.user_1.password)
+        response = self.client.post(
+            '/api/v1/codes/marking-code/scan_codes/',
+            data=["sfadljfsdf"],
+            content_type="application/json",
+        )
+        print(response.POST)
+        self.assertEqual(200, response.status_code)
